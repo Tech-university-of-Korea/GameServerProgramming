@@ -102,9 +102,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             else if (Input::IsDown(VK_DOWN)) {
                 sendInput.key = VK_DOWN;
             }
-            else if (Input::IsDown(VK_F1)) {
-                MessageBox(nullptr, L"aa", L"test", MB_OK);
-            }
 
             sendWsaBuf.buf = reinterpret_cast<char*>(&sendInput);
             sendWsaBuf.len = sizeof(PacketKeyInput);

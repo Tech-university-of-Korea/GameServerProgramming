@@ -15,10 +15,10 @@ public:
 private:
     HWND mHwnd;
     HDC mHDC;
-    std::unique_ptr<Gdiplus::Bitmap> mBackBuffer; // 백버퍼 (더블버퍼링)
+    std::unique_ptr<Gdiplus::Bitmap> mBackBuffer{ nullptr }; // 백버퍼 (더블버퍼링)
     Gdiplus::Color mBGColor;        // 배경색
-    Gdiplus::Graphics mMainGraphic;
-
+    std::unique_ptr<Gdiplus::Graphics> mMainGraphic{ nullptr };
+    
     Board mBoard;
 };
 

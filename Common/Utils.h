@@ -31,6 +31,26 @@ inline void PrintErrorMessage(int errorCode = ::WSAGetLastError(), const std::so
 	LocalFree(msg);
 }
 
+inline void PopupErrorMessage(int errorCode = ::WSAGetLastError(), const std::source_location& sl = std::source_location::current())
+{
+	LPVOID msg;
+	FormatMessageA(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+		NULL,
+		errorCode,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		reinterpret_cast<char*>(&msg),
+		0,
+		NULL
+	);
+	
+	auto str = std::format("Error Occurred!\n\nFILE: {}\n\nFUNCTION: {}\n\nLINE: {}\n\nError Code: {}\n\nError: {}",
+		sl.file_name(), sl.function_name(), sl.line(), errorCode, reinterpret_cast<char*>(msg));
+
+	MessageBoxA(nullptr, str.c_str(), "네트워크 오류", MB_OK | MB_ICONERROR);
+	LocalFree(msg);
+}
+
 // 03-26: 엔디안 맞추기.
 template <typename From> requires std::is_arithmetic_v<From>
 static void Serialize(From* value)

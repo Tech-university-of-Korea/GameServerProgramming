@@ -36,11 +36,19 @@ Network::~Network() {
 }
 
 void Network::Run() {
-    mClientSocket = ::WSAAccept(mListenSocket, nullptr, 0, nullptr, NULL);
+    sockaddr_in remoteAddr{ };
+    int32_t addrLen{ sizeof(sockaddr_in) };
+
+    mClientSocket = ::WSAAccept(mListenSocket, reinterpret_cast<sockaddr*>(&remoteAddr), &addrLen, nullptr, NULL);
     if (INVALID_SOCKET == mClientSocket) {
         std::cout << "Accept Failed." << std::endl;
+        PrintErrorMessage();
         ::exit(EXIT_FAILURE);
     }
+
+    char clientIP[INET_ADDRSTRLEN]{ };
+    ::inet_ntop(AF_INET, &remoteAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
+    std::cout << std::format("Client [{}] Connected\n", clientIP);
 
     PacketKeyInput recvInput{ };
     PacketPlayerPos sendPos{ };
@@ -83,18 +91,22 @@ void Network::Run() {
 void Network::ProcessKeyInput(uint8_t key) {
     switch (key) {
     case VK_LEFT:
+        std::cout << "Key Input LEFT" << std::endl;
         mPlayerX -= 1;
         break;
 
     case VK_RIGHT:
+        std::cout << "Key Input RIGHT" << std::endl;
         mPlayerX += 1;
         break;
 
     case VK_UP:
+        std::cout << "Key Input UP" << std::endl;
         mPlayerY -= 1;
         break;
 
     case VK_DOWN:
+        std::cout << "Key Input DOWN" << std::endl;
         mPlayerY += 1;
         break;
 
@@ -104,4 +116,5 @@ void Network::ProcessKeyInput(uint8_t key) {
 
     mPlayerX = std::clamp(mPlayerX, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
     mPlayerY = std::clamp(mPlayerY, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
+    std::cout << std::format("Player Position: ({}, {})\n", mPlayerX, mPlayerY);
 }

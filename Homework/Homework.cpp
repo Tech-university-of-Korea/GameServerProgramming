@@ -102,12 +102,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             else if (Input::IsDown(VK_DOWN)) {
                 sendInput.key = VK_DOWN;
             }
+            else if (Input::IsDown(VK_F1)) {
+                MessageBox(nullptr, L"aa", L"test", MB_OK);
+            }
 
             sendWsaBuf.buf = reinterpret_cast<char*>(&sendInput);
             sendWsaBuf.len = sizeof(PacketKeyInput);
             auto result = ::WSASend(gSocket, &sendWsaBuf, 1, &sent_bytes, 0, nullptr, nullptr);
             if (SOCKET_ERROR == result) {
-                PrintErrorMessage();
+                PopupErrorMessage();
                 break;
             }
 
@@ -115,7 +118,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             recvWsaBuf.len = sizeof(PacketPlayerPos);
             result = ::WSARecv(gSocket, &recvWsaBuf, 1, &recvd_bytes, &recv_flag, nullptr, nullptr);
             if (SOCKET_ERROR == result) {
-                PrintErrorMessage();
+                PopupErrorMessage();
                 break;
             }
 

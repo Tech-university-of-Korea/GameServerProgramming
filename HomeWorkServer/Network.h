@@ -15,4 +15,6 @@ private:
 
     int8_t mPlayerX{ 0 };
     int8_t mPlayerY{ 0 };
+
+    sockaddr_in mServerAddr{ };
 };

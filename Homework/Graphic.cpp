@@ -21,8 +21,8 @@ void Graphic::OnResize() {
     mBoard.OnResize(rect.right, rect.bottom);
 }
 
-void Graphic::Update() {
-    mBoard.Update();
+void Graphic::Update(uint8_t x, uint8_t y) {
+    mBoard.Update(x, y);
 }
 
 void Graphic::Render() {

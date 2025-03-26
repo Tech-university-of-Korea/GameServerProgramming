@@ -8,7 +8,6 @@
 
 #define MAX_LOADSTRING 100
 
-// 전역 변수:
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
 HWND hWnd;
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
@@ -17,6 +16,8 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름�
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
+SOCKET              InitNetwork(const char* ip, const uint16_t port);
+void                CloseNetwork();
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
@@ -52,7 +53,30 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ::GetClientRect(hWnd, &windowRect);
     graphic = new Graphic{ hWnd, ::GetDC(hWnd), windowRect.right, windowRect.bottom };
 
+    int32_t argc{ };
+    auto commandLines = CommandLineToArgvW(lpCmdLine, &argc);
+    if (argc > 1) {
+        MessageBox(nullptr, L"TO MANY ARGS!!!\nTHIS PROGRAM NEEDS ONLY ONE ARGUMENT (IPv4 ADDRESS)", L"COMMAND LINE ERROR", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    else if (argc < 1) {
+        MessageBox(nullptr, L"THIS PROGRAM ONE ARGUMENT (IPv4 ADDRESS)", L"COMMAND LINE ERROR", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+    gSocket = InitNetwork("127.0.0.1", SERVER_PORT);
+
     MSG msg;
+
+    DWORD sent_bytes;
+    WSABUF sendWsaBuf;
+
+    DWORD recvd_bytes;
+    DWORD recv_flag{ 0 };
+    WSABUF recvWsaBuf;
+
+    PacketKeyInput sendInput{ };
+    PacketPlayerPos recvPos{ };
     while (true) {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             if (WM_QUIT == msg.message) {
@@ -63,8 +87,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
         else {
+            sendInput.key = 0;
+
             Input::UpdateKey();
-            graphic->Update();
+            if (Input::IsDown(VK_LEFT)) {
+                sendInput.key = VK_LEFT;
+            }
+            else if (Input::IsDown(VK_RIGHT)) {
+                sendInput.key = VK_RIGHT;
+            }
+            else if (Input::IsDown(VK_UP)) {
+                sendInput.key = VK_UP;
+            }
+            else if (Input::IsDown(VK_DOWN)) {
+                sendInput.key = VK_DOWN;
+            }
+
+            sendWsaBuf.buf = reinterpret_cast<char*>(&sendInput);
+            sendWsaBuf.len = sizeof(PacketKeyInput);
+            if (SOCKET_ERROR == ::WSASend(gSocket, &sendWsaBuf, 1, &sent_bytes, 0, nullptr, nullptr)) {
+                break;
+            }
+
+            recvWsaBuf.buf = reinterpret_cast<char*>(&recvPos);
+            recvWsaBuf.len = sizeof(PacketPlayerPos);
+            auto result = ::WSARecv(gSocket, &recvWsaBuf, 1, &recvd_bytes, &recv_flag, nullptr, nullptr);
+            if (SOCKET_ERROR == result) {
+                break;
+            }
+
+            graphic->Update(recvPos.x, recvPos.y);
             graphic->Render();
         }
     }
@@ -73,6 +125,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // GDI+ 종료작업입니다.
     Gdiplus::GdiplusShutdown(gdiToken);
+
+    CloseNetwork();
 
     return (int) msg.wParam;
 }
@@ -113,6 +167,35 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
    return TRUE;
+}
+
+SOCKET InitNetwork(const char* ip, const uint16_t port)
+{
+    WSADATA wsaData;
+    if (0 != ::WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+        return INVALID_SOCKET;
+    }
+
+    SOCKET socket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, NULL);
+    if (INVALID_SOCKET == socket) {
+        return INVALID_SOCKET;
+    }
+
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = ::htons(port);
+    ::inet_pton(AF_INET, ip, &addr.sin_addr.s_addr);
+
+    if (SOCKET_ERROR == ::WSAConnect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in), nullptr, nullptr, nullptr, nullptr)) {
+        return INVALID_SOCKET;
+    }
+
+    return socket;
+}
+
+void CloseNetwork() {
+    ::closesocket(gSocket);
+    ::WSACleanup();
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

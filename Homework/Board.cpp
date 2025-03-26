@@ -21,25 +21,9 @@ void Board::OnResize(INT32 windowWidth, INT32 windowHeight) {
     }
 }
 
-void Board::Update() {
-    if (Input::IsDown(VK_LEFT)) {
-        mChessPiecePosition.X -= 1;
-    }
-
-    if (Input::IsDown(VK_RIGHT)) {
-        mChessPiecePosition.X += 1;
-    }
-
-    if (Input::IsDown(VK_DOWN)) {
-        mChessPiecePosition.Y += 1;
-    }
-
-    if (Input::IsDown(VK_UP)) {
-        mChessPiecePosition.Y -= 1;
-    }
-
-    mChessPiecePosition.X = std::clamp(mChessPiecePosition.X, 0, static_cast<int>(BOARD_CELLS - 1));
-    mChessPiecePosition.Y = std::clamp(mChessPiecePosition.Y, 0, static_cast<int>(BOARD_CELLS - 1));
+void Board::Update(uint8_t x, uint8_t y) {
+    mChessPiecePosition.X = x;
+    mChessPiecePosition.Y = y;
 }
 
 void Board::Render(Gdiplus::Graphics* backbuffer) {

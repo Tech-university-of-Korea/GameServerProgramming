@@ -2,6 +2,9 @@
 
 #include "targetver.h"
 
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+
 // Windows 헤더 파일
 #include <windows.h>
 
@@ -18,3 +21,7 @@
 #include <memory>
 
 #include <algorithm>
+
+#include "../Common/Protocol.h"
+
+extern SOCKET gSocket;

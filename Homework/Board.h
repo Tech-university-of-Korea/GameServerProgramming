@@ -13,7 +13,7 @@ public:
     void OnResize(INT32 windowWidth, INT32 windowHeight);
 
     // 업데이트 (체스 말 이동)
-    void Update();
+    void Update(uint8_t x, uint8_t y);
 
     // 체스판 그리기
     void Render(Gdiplus::Graphics* backbuffer);

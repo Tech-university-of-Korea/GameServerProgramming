@@ -9,7 +9,7 @@ public:
 
 public:
     void OnResize();
-    void Update();
+    void Update(uint8_t x, uint8_t y);
     void Render();
 
 private:

@@ -11,7 +11,7 @@ inline constexpr auto NATIVE_ENDIAN = std::endian::native;
 template <typename T>
 inline constexpr T ZERO = 0;
 
-void PrintErrorMessage(int errorCode = ::WSAGetLastError(), const std::source_location& sl = std::source_location::current())
+inline void PrintErrorMessage(int errorCode = ::WSAGetLastError(), const std::source_location& sl = std::source_location::current())
 {
 	LPVOID msg;
 	FormatMessageA(

@@ -21,9 +21,9 @@ void Board::OnResize(INT32 windowWidth, INT32 windowHeight) {
     }
 }
 
-void Board::Update(uint8_t x, uint8_t y) {
-    mChessPiecePosition.X = x;
-    mChessPiecePosition.Y = y;
+void Board::Update(int8_t x, int8_t y) {
+    mChessPiecePosition.X = static_cast<int32_t>(x);
+    mChessPiecePosition.Y = static_cast<int32_t>(y);
 }
 
 void Board::Render(Gdiplus::Graphics* backbuffer) {

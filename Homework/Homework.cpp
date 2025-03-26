@@ -105,14 +105,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
             sendWsaBuf.buf = reinterpret_cast<char*>(&sendInput);
             sendWsaBuf.len = sizeof(PacketKeyInput);
-            if (SOCKET_ERROR == ::WSASend(gSocket, &sendWsaBuf, 1, &sent_bytes, 0, nullptr, nullptr)) {
+            auto result = ::WSASend(gSocket, &sendWsaBuf, 1, &sent_bytes, 0, nullptr, nullptr);
+            if (SOCKET_ERROR == result) {
+                PrintErrorMessage();
                 break;
             }
 
             recvWsaBuf.buf = reinterpret_cast<char*>(&recvPos);
             recvWsaBuf.len = sizeof(PacketPlayerPos);
-            auto result = ::WSARecv(gSocket, &recvWsaBuf, 1, &recvd_bytes, &recv_flag, nullptr, nullptr);
+            result = ::WSARecv(gSocket, &recvWsaBuf, 1, &recvd_bytes, &recv_flag, nullptr, nullptr);
             if (SOCKET_ERROR == result) {
+                PrintErrorMessage();
                 break;
             }
 

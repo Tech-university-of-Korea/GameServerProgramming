@@ -61,10 +61,9 @@ void Network::Run() {
         auto ret = ::WSARecv(mClientSocket, &recvWsaBuf, 1, &recvdBytes, &recvFlag, nullptr, nullptr);
         if (SOCKET_ERROR == ret) {
             std::cout << "Recv Error" << std::endl;
+            PrintErrorMessage();
             break;
         }
-
-        std::cout << "a" << std::endl;
 
         ProcessKeyInput(recvInput.key);
 
@@ -72,7 +71,12 @@ void Network::Run() {
         sendPos.y = mPlayerY;
 
         DWORD sentBytes;
-        ::WSASend(mClientSocket, &sendWsaBuf, 1, &sentBytes, 0, nullptr, nullptr);
+        ret = ::WSASend(mClientSocket, &sendWsaBuf, 1, &sentBytes, 0, nullptr, nullptr);
+        if (SOCKET_ERROR == ret) {
+            std::cout << "Send Error" << std::endl;
+            PrintErrorMessage();
+            break;
+        }
     }
 }
 
@@ -95,9 +99,9 @@ void Network::ProcessKeyInput(uint8_t key) {
         break;
 
     default:
-        break;
+        return;
     }
 
-    mPlayerX = std::clamp(mPlayerX, static_cast<uint8_t>(0), static_cast<uint8_t>(BOARD_SIZE - 1));
-    mPlayerY = std::clamp(mPlayerY, static_cast<uint8_t>(0), static_cast<uint8_t>(BOARD_SIZE - 1));
+    mPlayerX = std::clamp(mPlayerX, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
+    mPlayerY = std::clamp(mPlayerY, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
 }

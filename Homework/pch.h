@@ -23,5 +23,6 @@
 #include <algorithm>
 
 #include "../Common/Protocol.h"
+#include "../Common/Utils.h"
 
 extern SOCKET gSocket;

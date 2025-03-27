@@ -13,13 +13,17 @@ HWND hWnd;
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
-// 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
+HWND ipaddrControl;
+DWORD ipaddrIP;
+
+// 이 코드 모듈에 포함된 함수의 선언을 전달합니다:  
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 SOCKET              InitNetwork(const char* ip, const uint16_t port);
+SOCKET              InitNetwork(DWORD ip, const uint16_t port);
 void                CloseNetwork();
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    DialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 Graphic* graphic;
 
@@ -53,18 +57,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ::GetClientRect(hWnd, &windowRect);
     graphic = new Graphic{ hWnd, ::GetDC(hWnd), windowRect.right, windowRect.bottom };
 
-    int32_t argc{ };
-    auto commandLines = CommandLineToArgvW(lpCmdLine, &argc);
-    if (argc > 1) {
-        MessageBox(nullptr, L"TO MANY ARGS!!!\nTHIS PROGRAM NEEDS ONLY ONE ARGUMENT (IPv4 ADDRESS)", L"COMMAND LINE ERROR", MB_OK | MB_ICONERROR);
-        return FALSE;
-    }
-    else if (argc < 1) {
-        MessageBox(nullptr, L"THIS PROGRAM ONE ARGUMENT (IPv4 ADDRESS)", L"COMMAND LINE ERROR", MB_OK | MB_ICONERROR);
-        return FALSE;
-    }
-
-    gSocket = InitNetwork("127.0.0.1", SERVER_PORT);
+    DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), nullptr, DialogProc);
+    gSocket = InitNetwork(ipaddrIP, SERVER_PORT);
 
     MSG msg;
 
@@ -196,7 +190,32 @@ SOCKET InitNetwork(const char* ip, const uint16_t port)
     return socket;
 }
 
-void CloseNetwork() {
+SOCKET InitNetwork(DWORD ip, const uint16_t port)
+{
+    WSADATA wsaData;
+    if (0 != ::WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+        return INVALID_SOCKET;
+    }
+
+    SOCKET socket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, NULL);
+    if (INVALID_SOCKET == socket) {
+        return INVALID_SOCKET;
+    }
+
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = ::htons(port);
+    addr.sin_addr.s_addr = ::htonl(ip);
+
+    if (SOCKET_ERROR == ::WSAConnect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in), nullptr, nullptr, nullptr, nullptr)) {
+        return INVALID_SOCKET;
+    }
+
+    return socket;
+}
+
+void CloseNetwork() 
+{
     ::closesocket(gSocket);
     ::WSACleanup();
 }
@@ -227,4 +246,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+INT_PTR CALLBACK DialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message) {
+    case WM_INITDIALOG:
+        ipaddrControl = GetDlgItem(hDlg, IDC_IPADDRESS1);
+        //ipaddrButton = GetDlgItem(hDlg, IDC_BUTTON1);
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDOK:
+            SendMessage(ipaddrControl, IPM_GETADDRESS, 0, (LPARAM)&ipaddrIP);
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+
+        case IDCANCEL:
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+
+        default:
+            break;
+        }
+        break;
+    }
+
+    return (INT_PTR)FALSE;
+
 }

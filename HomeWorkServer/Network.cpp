@@ -125,7 +125,7 @@ void Network::AddSession(SessionIdType id, SOCKET socket) {
     mSessionMap.try_emplace(id, id, socket);
     decltype(auto) newSession = mSessionMap[id];
 
-    std::cout << std::format("Session Connect! Id: {}", id);
+    std::cout << std::format("Session Connect! Id: {}\n", id);
 
     PacketNotifyId idPacket{ sizeof(PacketNotifyId), PACKET_TYPE_NOTIFY_ID, id };
     newSession.DoSend(id, &idPacket);
@@ -155,7 +155,7 @@ void Network::EraseSession(SessionIdType id) {
         mSessionMap.erase(id);
     }
 
-    std::cout << std::format("Session Disconnect! Id: {}", id);
+    std::cout << std::format("Session Disconnect! Id: {}\n", id);
 
     PacketPlayerExit exitPacket{ sizeof(PacketPlayerExit), PACKET_TYPE_PLAYER_EXIT, id };
     BroadCast(&exitPacket);

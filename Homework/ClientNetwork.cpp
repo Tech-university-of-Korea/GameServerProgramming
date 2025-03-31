@@ -79,7 +79,7 @@ void ClientNetwork::ProcessPacket(PacketHeader* packet) {
     case PACKET_TYPE_NOTIFY_ID:
         {
             mId = packet->senderId;
-            graphic->GetBoard().AddChessPiece(mId, { 0, 0 });
+            graphic->GetBoard().AddChessPiece(L"w-knight.png", mId, {0, 0});
         }
         break;
 
@@ -87,7 +87,7 @@ void ClientNetwork::ProcessPacket(PacketHeader* packet) {
         {
             if (mId != packet->senderId) {
                 auto enterPacket = reinterpret_cast<PacketPlayerEnter*>(packet);
-                graphic->GetBoard().AddChessPiece(enterPacket->senderId, enterPacket->pos);
+                graphic->GetBoard().AddChessPiece(L"b-knight.png", enterPacket->senderId, enterPacket->pos);
             }
         }
         break;

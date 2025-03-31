@@ -13,6 +13,10 @@ void Board::AddChessPiece(SessionIdType id, Byte2 pos) {
     mChessPieces.try_emplace(id, L"w-knight.png", pos);
 }
 
+void Board::AddChessPiece(const std::wstring& imageFile, SessionIdType id, Byte2 pos) {
+    mChessPieces.try_emplace(id, imageFile, pos);
+}
+
 void Board::EraseChessPiece(SessionIdType id) {
     if (not mChessPieces.contains(id)) {
         return;

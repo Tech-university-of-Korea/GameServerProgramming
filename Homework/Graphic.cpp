@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Graphic.h"
+#include "ClientNetwork.h"
 
 Graphic::Graphic(HWND hwnd, HDC hDC, INT32 windowWidth, INT32 windowHeight)
     : mHwnd{ hwnd }, mHDC{ hDC }, mBoard{ windowWidth, windowHeight } { 
@@ -8,6 +9,10 @@ Graphic::Graphic(HWND hwnd, HDC hDC, INT32 windowWidth, INT32 windowHeight)
 }
 
 Graphic::~Graphic() { }
+
+Board& Graphic::GetBoard() {
+    return mBoard;
+}
 
 void Graphic::OnResize() {
     if (nullptr == mHwnd) {
@@ -28,8 +33,10 @@ void Graphic::OnResize() {
     mMainGraphic = std::make_unique<Gdiplus::Graphics>(::GetDC(mHwnd));
 }
 
-void Graphic::Update(int8_t x, int8_t y) {
-    mBoard.Update(x, y);
+void Graphic::Update() {
+    gClientNetwork->DoRecv();
+
+    mBoard.Update();
 }
 
 void Graphic::Render() {

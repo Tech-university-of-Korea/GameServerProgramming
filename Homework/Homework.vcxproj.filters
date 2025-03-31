@@ -16,6 +16,15 @@
     <Filter Include="pch">
       <UniqueIdentifier>{6c4ff9e2-cba5-46b6-bd3a-322c75648a6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{f49624d0-30b3-454c-9f0d-1eaa72ce6790}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gdiplus">
+      <UniqueIdentifier>{a4725c92-e6cf-46f7-899d-28f8bdcbf017}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="extern">
+      <UniqueIdentifier>{c50590cb-e1fa-407c-a0d4-c4e02f022c7f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -27,20 +36,29 @@
     <ClInclude Include="pch.h">
       <Filter>pch</Filter>
     </ClInclude>
-    <ClInclude Include="Graphic.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Board.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Input.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Protocol.h">
+    <ClInclude Include="ChessPiece.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Graphic.h">
+      <Filter>Gdiplus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Protocol.h">
+      <Filter>extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Types.h">
+      <Filter>extern</Filter>
+    </ClInclude>
     <ClInclude Include="..\Common\Utils.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>extern</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientNetwork.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -50,14 +68,20 @@
     <ClCompile Include="pch.cpp">
       <Filter>pch</Filter>
     </ClCompile>
-    <ClCompile Include="Graphic.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="Board.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Input.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ChessPiece.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphic.cpp">
+      <Filter>Gdiplus</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientNetwork.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

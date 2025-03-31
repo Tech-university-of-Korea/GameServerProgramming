@@ -19,6 +19,7 @@
 #pragma comment(lib, "gdiplus")
 
 #include <array>
+#include <unordered_map>
 #include <memory>
 
 #include <algorithm>
@@ -26,4 +27,5 @@
 #include "../Common/Protocol.h"
 #include "../Common/Utils.h"
 
-extern SOCKET gSocket;
+extern class Graphic* graphic;
+extern std::unique_ptr<class ClientNetwork> gClientNetwork;

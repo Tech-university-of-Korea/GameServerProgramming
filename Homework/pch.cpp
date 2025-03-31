@@ -1,3 +1,6 @@
 #include "pch.h"
+#include "ClientNetwork.h"
+#include "Graphic.h"
 
-SOCKET gSocket = INVALID_SOCKET;
+Graphic* graphic;
+std::unique_ptr<ClientNetwork> gClientNetwork = std::make_unique<ClientNetwork>();

@@ -5,6 +5,7 @@
 #include "resource.h"
 #include "Input.h"
 #include "Graphic.h"
+#include "ClientNetwork.h"
 
 #define MAX_LOADSTRING 100
 
@@ -19,13 +20,8 @@ DWORD ipaddrIP;
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:  
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
-SOCKET              InitNetwork(const char* ip, const uint16_t port);
-SOCKET              InitNetwork(DWORD ip, const uint16_t port);
-void                CloseNetwork();
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    DialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-
-Graphic* graphic;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -58,19 +54,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     graphic = new Graphic{ hWnd, ::GetDC(hWnd), windowRect.right, windowRect.bottom };
 
     DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), nullptr, DialogProc);
-    gSocket = InitNetwork(ipaddrIP, SERVER_PORT);
+    gClientNetwork->InitNetwork(ipaddrIP, SERVER_PORT);
 
     MSG msg;
 
-    DWORD sent_bytes;
-    WSABUF sendWsaBuf;
-
-    DWORD recvd_bytes;
-    DWORD recv_flag{ 0 };
-    WSABUF recvWsaBuf;
-
-    PacketKeyInput sendInput{ };
-    PacketPlayerPos recvPos{ };
     while (true) {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             if (WM_QUIT == msg.message) {
@@ -81,39 +68,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
         else {
-            sendInput.key = 0;
-
             Input::UpdateKey();
-            if (Input::IsDown(VK_LEFT)) {
-                sendInput.key = VK_LEFT;
-            }
-            else if (Input::IsDown(VK_RIGHT)) {
-                sendInput.key = VK_RIGHT;
-            }
-            else if (Input::IsDown(VK_UP)) {
-                sendInput.key = VK_UP;
-            }
-            else if (Input::IsDown(VK_DOWN)) {
-                sendInput.key = VK_DOWN;
-            }
 
-            sendWsaBuf.buf = reinterpret_cast<char*>(&sendInput);
-            sendWsaBuf.len = sizeof(PacketKeyInput);
-            auto result = ::WSASend(gSocket, &sendWsaBuf, 1, &sent_bytes, 0, nullptr, nullptr);
-            if (SOCKET_ERROR == result) {
-                PopupErrorMessage();
-                break;
-            }
-
-            recvWsaBuf.buf = reinterpret_cast<char*>(&recvPos);
-            recvWsaBuf.len = sizeof(PacketPlayerPos);
-            result = ::WSARecv(gSocket, &recvWsaBuf, 1, &recvd_bytes, &recv_flag, nullptr, nullptr);
-            if (SOCKET_ERROR == result) {
-                PopupErrorMessage();
-                break;
-            }
-
-            graphic->Update(recvPos.x, recvPos.y);
+            graphic->Update();
             graphic->Render();
         }
     }
@@ -123,7 +80,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // GDI+ 종료작업입니다.
     Gdiplus::GdiplusShutdown(gdiToken);
 
-    CloseNetwork();
+    gClientNetwork->CloseNetwork();
 
     return (int) msg.wParam;
 }
@@ -164,60 +121,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
    return TRUE;
-}
-
-SOCKET InitNetwork(const char* ip, const uint16_t port)
-{
-    WSADATA wsaData;
-    if (0 != ::WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-        return INVALID_SOCKET;
-    }
-
-    SOCKET socket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, NULL);
-    if (INVALID_SOCKET == socket) {
-        return INVALID_SOCKET;
-    }
-
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = ::htons(port);
-    ::inet_pton(AF_INET, ip, &addr.sin_addr.s_addr);
-
-    if (SOCKET_ERROR == ::WSAConnect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in), nullptr, nullptr, nullptr, nullptr)) {
-        return INVALID_SOCKET;
-    }
-
-    return socket;
-}
-
-SOCKET InitNetwork(DWORD ip, const uint16_t port)
-{
-    WSADATA wsaData;
-    if (0 != ::WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-        return INVALID_SOCKET;
-    }
-
-    SOCKET socket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, NULL);
-    if (INVALID_SOCKET == socket) {
-        return INVALID_SOCKET;
-    }
-
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = ::htons(port);
-    addr.sin_addr.s_addr = ::htonl(ip);
-
-    if (SOCKET_ERROR == ::WSAConnect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in), nullptr, nullptr, nullptr, nullptr)) {
-        return INVALID_SOCKET;
-    }
-
-    return socket;
-}
-
-void CloseNetwork() 
-{
-    ::closesocket(gSocket);
-    ::WSACleanup();
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

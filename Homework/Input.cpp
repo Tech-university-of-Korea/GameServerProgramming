@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Input.h"
+#include "ClientNetwork.h"
 
 bool Input::IsDown(KeyIdxType key) {
     return KeyState::DOWN == mKeyboard[key];
@@ -64,5 +65,23 @@ void Input::UpdateKey() {
 
     for (KeyIdxType key = 0; key < keyboard.size(); ++key) {
         UpdateKeyState(keyboard[key] & 0x80, key);
+    }
+
+    PacketKeyInput inputPacket{ sizeof(PacketKeyInput), PACKET_TYPE_INPUT, };
+    if (IsDown(VK_LEFT)) {
+        inputPacket.key = VK_LEFT;
+        gClientNetwork->DoSend(&inputPacket);
+    }
+    else if (IsDown(VK_RIGHT)) {
+        inputPacket.key = VK_RIGHT;
+        gClientNetwork->DoSend(&inputPacket);
+    }
+    else if (IsDown(VK_UP)) {
+        inputPacket.key = VK_UP;
+        gClientNetwork->DoSend(&inputPacket);
+    }
+    else if (IsDown(VK_DOWN)) {
+        inputPacket.key = VK_DOWN;
+        gClientNetwork->DoSend(&inputPacket);
     }
 }

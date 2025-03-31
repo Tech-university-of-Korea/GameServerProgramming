@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ChessPiece.h"
+
 class Board {
 public:
     inline static constexpr size_t BOARD_CELLS = 8;
@@ -9,12 +11,13 @@ public:
     ~Board();
 
 public:
+    void AddChessPiece(SessionIdType id, Byte2 pos);
+    void EraseChessPiece(SessionIdType id);
+    void MoveChessPiece(SessionIdType id, Byte2 pos);
+
     // 윈도우 크기 변경
     void OnResize(INT32 windowWidth, INT32 windowHeight);
-
-    // 업데이트 (체스 말 이동)
-    void Update(int8_t x, int8_t y);
-
+    void Update();
     // 체스판 그리기
     void Render(Gdiplus::Graphics* backbuffer);
 
@@ -22,6 +25,5 @@ private:
     Gdiplus::SizeF mCellSize;
     std::array<std::array<Gdiplus::PointF, 8>, 8> mBoard;
 
-    Gdiplus::Point mChessPiecePosition{ 0, 0 };
-    Gdiplus::Bitmap mChessPiece;
+    std::unordered_map<SessionIdType, ChessPiece> mChessPieces{ };
 };

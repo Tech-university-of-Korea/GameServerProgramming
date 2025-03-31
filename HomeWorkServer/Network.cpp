@@ -1,5 +1,29 @@
 #include "pch.h"
 #include "Network.h"
+#include "OverlappedEx.h"
+
+void CALLBACK RecvCallback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
+{
+    auto sessionid = reinterpret_cast<int64_t>(over->hEvent);
+
+    decltype(auto) session = gNetwork->GetSession(static_cast<SessionIdType>(sessionid));
+
+    if (num_bytes <= 0) {
+        gNetwork->EraseSession(sessionid);
+    }
+    else {
+        char* recvBuffer = session.GetBuffer();
+        gNetwork->CheckAndProcessPacket(recvBuffer, num_bytes);
+
+        session.DoRecv();
+    }
+}
+
+void CALLBACK SendCallback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
+{
+    OverlappedEx* overlapped = reinterpret_cast<OverlappedEx*>(over);
+    delete overlapped;
+}
 
 Network::Network() {
     WSADATA wsaData;
@@ -8,9 +32,15 @@ Network::Network() {
         ::exit(EXIT_FAILURE);
     }
 
-    mListenSocket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, NULL);
+    mListenSocket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, NULL, WSA_FLAG_OVERLAPPED);
     if (INVALID_SOCKET == mListenSocket) {
         std::cout << "Failed to create socket." << std::endl;
+        ::exit(EXIT_FAILURE);
+    }
+
+    DWORD reuse = 1;
+    if (SOCKET_ERROR == ::setsockopt(mListenSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse), sizeof(reuse))) {
+        PrintErrorMessage();
         ::exit(EXIT_FAILURE);
     }
 
@@ -20,6 +50,7 @@ Network::Network() {
     addr.sin_addr.s_addr = ::htonl(INADDR_ANY);
     if (SOCKET_ERROR == ::bind(mListenSocket, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in))) {
         std::cout << "Bind failed. Unable to assign address to socket." << std::endl;
+        PrintErrorMessage();
         ::exit(EXIT_FAILURE);
     }
 
@@ -30,91 +61,108 @@ Network::Network() {
 }
 
 Network::~Network() {
-    ::closesocket(mClientSocket);
     ::closesocket(mListenSocket);
     ::WSACleanup();
 }
 
+Session& Network::GetSession(SessionIdType id) {
+    return mSessionMap[id];
+}
+
+SessionIdType Network::GetSessionCount() const {
+    return static_cast<SessionIdType>(mSessionMap.size());
+}
+
 void Network::Run() {
-    sockaddr_in remoteAddr{ };
-    int32_t addrLen{ sizeof(sockaddr_in) };
-
-    mClientSocket = ::WSAAccept(mListenSocket, reinterpret_cast<sockaddr*>(&remoteAddr), &addrLen, nullptr, NULL);
-    if (INVALID_SOCKET == mClientSocket) {
-        std::cout << "Accept Failed." << std::endl;
-        PrintErrorMessage();
-        ::exit(EXIT_FAILURE);
-    }
-
-    char clientIP[INET_ADDRSTRLEN]{ };
-    ::inet_ntop(AF_INET, &remoteAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
-    std::cout << std::format("Client [{}] Connected\n", clientIP);
-
-    PacketKeyInput recvInput{ };
-    PacketPlayerPos sendPos{ };
-   
-    DWORD recvdBytes{ };
-    DWORD recvFlag{ 0 };
-
-    WSABUF recvWsaBuf{ };
-    WSABUF sendWsaBuf{ };
-    recvWsaBuf.buf = reinterpret_cast<char*>(&recvInput);
-    recvWsaBuf.len = sizeof(PacketKeyInput);
-
-    sendWsaBuf.buf = reinterpret_cast<char*>(&sendPos);
-    sendWsaBuf.len = sizeof(PacketPlayerPos);
-
-    while (true) {
-        std::memset(&recvInput, 0, sizeof(PacketKeyInput));
-        auto ret = ::WSARecv(mClientSocket, &recvWsaBuf, 1, &recvdBytes, &recvFlag, nullptr, nullptr);
-        if (SOCKET_ERROR == ret) {
-            std::cout << "Recv Error" << std::endl;
-            PrintErrorMessage();
-            break;
-        }
-
-        ProcessKeyInput(recvInput.key);
-
-        sendPos.x = mPlayerX;
-        sendPos.y = mPlayerY;
-
-        DWORD sentBytes;
-        ret = ::WSASend(mClientSocket, &sendWsaBuf, 1, &sentBytes, 0, nullptr, nullptr);
-        if (SOCKET_ERROR == ret) {
-            std::cout << "Send Error" << std::endl;
-            PrintErrorMessage();
-            break;
+    int64_t clientId{ 0 };
+    for (; ; ++clientId) {
+        SOCKET socket = ::WSAAccept(mListenSocket, nullptr, 0, nullptr, NULL);
+        if (INVALID_SOCKET != socket) {
+            std::cout << "Accept!" << std::endl;
+            if (10 <= gNetwork->GetSessionCount()) {
+                std::cout << "Max Session Connected!!" << std::endl;
+                continue;
+            }
+            gNetwork->AddSession(clientId, socket);
         }
     }
 }
 
-void Network::ProcessKeyInput(uint8_t key) {
-    switch (key) {
-    case VK_LEFT:
-        std::cout << "Key Input LEFT" << std::endl;
-        mPlayerX -= 1;
-        break;
+void Network::CheckAndProcessPacket(char* recvBuffer, DWORD numBytes) {
+    char* iter = recvBuffer;
+    PacketHeader* packet;
+    while (iter < recvBuffer + numBytes) {
+        packet = reinterpret_cast<PacketHeader*>(iter);
+        iter = iter + packet->size;
 
-    case VK_RIGHT:
-        std::cout << "Key Input RIGHT" << std::endl;
-        mPlayerX += 1;
-        break;
+        if (not mSessionMap.contains(packet->senderId)) {
+            continue;
+        }
 
-    case VK_UP:
-        std::cout << "Key Input UP" << std::endl;
-        mPlayerY -= 1;
-        break;
+        ProcessPacket(packet);
+    }
+}
 
-    case VK_DOWN:
-        std::cout << "Key Input DOWN" << std::endl;
-        mPlayerY += 1;
+void Network::ProcessPacket(PacketHeader* packet) {
+    switch (packet->type) {
+    case PacketType::PACKET_TYPE_INPUT:
+        {
+            decltype(auto) session = mSessionMap[packet->senderId];
+            session.ProcessKeyInput(reinterpret_cast<PacketKeyInput*>(packet)->key);
+            PacketPlayerPos posPacket{ sizeof(PacketPlayerPos), PACKET_TYPE_PLAYER_POSITION, session.GetId(), session.GetPosition() };
+            
+            BroadCast(&posPacket);
+        }
         break;
 
     default:
-        return;
+        break;
+    }
+}
+
+
+void Network::AddSession(SessionIdType id, SOCKET socket) {
+    mSessionMap.try_emplace(id, id, socket);
+    decltype(auto) newSession = mSessionMap[id];
+
+    std::cout << std::format("Session Connect! Id: {}", id);
+
+    PacketNotifyId idPacket{ sizeof(PacketNotifyId), PACKET_TYPE_NOTIFY_ID, id };
+    newSession.DoSend(id, &idPacket);
+
+    PacketPlayerEnter enterPacket{ sizeof(PacketPlayerEnter), PACKET_TYPE_PLAYER_ENTER };
+    for (auto& [id, session] : mSessionMap) {
+        if (id == newSession.GetId()) {
+            continue;
+        }
+
+        enterPacket.senderId = id;
+        enterPacket.pos = session.GetPosition();
+
+        newSession.DoSend(id, &enterPacket);
     }
 
-    mPlayerX = std::clamp(mPlayerX, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
-    mPlayerY = std::clamp(mPlayerY, static_cast<int8_t>(0), static_cast<int8_t>(BOARD_SIZE - 1));
-    std::cout << std::format("Player Position: ({}, {})\n", mPlayerX, mPlayerY);
+    PacketPlayerEnter newSessionEnterPacket{ sizeof(PacketPlayerEnter), PACKET_TYPE_PLAYER_ENTER };
+    newSessionEnterPacket.senderId = newSession.GetId();
+    newSessionEnterPacket.pos = newSession.GetPosition();
+    BroadCast(&newSessionEnterPacket);
+
+    newSession.DoRecv();
+}
+
+void Network::EraseSession(SessionIdType id) {
+    if (mSessionMap.contains(id)) {
+        mSessionMap.erase(id);
+    }
+
+    std::cout << std::format("Session Disconnect! Id: {}", id);
+
+    PacketPlayerExit exitPacket{ sizeof(PacketPlayerExit), PACKET_TYPE_PLAYER_EXIT, id };
+    BroadCast(&exitPacket);
+}
+
+void Network::BroadCast(PacketHeader* packet) {
+    for (auto& [id, session] : mSessionMap) {
+        session.DoSend(id, packet);
+    }
 }

@@ -3,11 +3,31 @@
 #include "Input.h"
 
 Board::Board(INT32 windowWidth, INT32 windowHeight)
-    : mCellSize{ windowWidth / static_cast<float>(BOARD_CELLS), windowHeight / static_cast<float>(BOARD_CELLS) }, mChessPiece{ L"w-knight.png" } {
+    : mCellSize{ windowWidth / static_cast<float>(BOARD_CELLS), windowHeight / static_cast<float>(BOARD_CELLS) } {
     OnResize(windowWidth, windowHeight);
 }
 
 Board::~Board() { }
+
+void Board::AddChessPiece(SessionIdType id, Byte2 pos) {
+    mChessPieces.try_emplace(id, L"w-knight.png", pos);
+}
+
+void Board::EraseChessPiece(SessionIdType id) {
+    if (not mChessPieces.contains(id)) {
+        return;
+    }
+
+    mChessPieces.erase(id);
+}
+
+void Board::MoveChessPiece(SessionIdType id, Byte2 pos) {
+    if (not mChessPieces.contains(id)) {
+        return;
+    }
+
+    mChessPieces[id].SetPosition(pos);
+}
 
 void Board::OnResize(INT32 windowWidth, INT32 windowHeight) {
     mCellSize = { windowWidth / static_cast<float>(BOARD_CELLS), windowHeight / static_cast<float>(BOARD_CELLS) };
@@ -21,10 +41,7 @@ void Board::OnResize(INT32 windowWidth, INT32 windowHeight) {
     }
 }
 
-void Board::Update(int8_t x, int8_t y) {
-    mChessPiecePosition.X = static_cast<int32_t>(x);
-    mChessPiecePosition.Y = static_cast<int32_t>(y);
-}
+void Board::Update() { }
 
 void Board::Render(Gdiplus::Graphics* backbuffer) {
     Gdiplus::SolidBrush lightBrown{ Gdiplus::Color{ 0xFF, 0xD2, 0xA5, 0x7C } };
@@ -41,7 +58,11 @@ void Board::Render(Gdiplus::Graphics* backbuffer) {
         }
     }
 
-    Gdiplus::PointF cellPoint{ mChessPiecePosition.X * mCellSize.Width, mChessPiecePosition.Y * mCellSize.Height };
-    Gdiplus::RectF cellRect{ cellPoint, mCellSize };
-    backbuffer->DrawImage(&mChessPiece, cellRect);
+    for (auto& [id, piece] : mChessPieces) {
+        auto pos = piece.GetPosition();
+        Gdiplus::PointF cellPoint{ static_cast<float>(pos.x) * mCellSize.Width, static_cast<float>(pos.y) * mCellSize.Height };
+        Gdiplus::RectF cellRect{ cellPoint, mCellSize };
+
+        piece.Render(cellRect, backbuffer);
+    }
 }

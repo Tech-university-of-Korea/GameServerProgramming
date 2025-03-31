@@ -8,8 +8,10 @@ public:
     ~Graphic();
 
 public:
+    Board& GetBoard();
+
     void OnResize();
-    void Update(int8_t x, int8_t y);
+    void Update();
     void Render();
 
 private:
